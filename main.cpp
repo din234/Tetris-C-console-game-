@@ -269,6 +269,7 @@ void GameTetris::controller(){
                 if (j == 3){x++;}
             }
         }
+        calculateCollisionStep();
     }
 
     // Rotate left and rotate right
@@ -293,6 +294,7 @@ void GameTetris::controller(){
         for (int k = 0;k < 4;k++){
             block[k] = blockData(k,rotationStep % totalRotationStep,blockId);
         }
+        calculateCollisionStep();
     }
 
     if ((GetAsyncKeyState(VK_DOWN) == GetAsyncKeyState(VK_SPACE)) && keyPressed3){
@@ -302,10 +304,6 @@ void GameTetris::controller(){
         //speed = speed*4;
         keyPressed3 = true;
         if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;}
-    }
-
-    if (keyPressed1 || keyPressed2 || keyPressed3){
-        calculateCollisionStep();
     }
 }
 
