@@ -304,7 +304,7 @@ void GameTetris::controller(){
         if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;}
     }
 
-    if (keyPressed1 || keyPressed2){
+    if (keyPressed1 || keyPressed2 || keyPressed3){
         calculateCollisionStep();
     }
 }
