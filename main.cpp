@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unistd.h>
 #include <windows.h>
 #include <ctime>
 
@@ -19,24 +20,32 @@ class GameTetris
         // biến 1D array thành 2D array: 1DArrayIndex = x + y*width;
         inline int index(int posx,int posy) {return posx + (posy * width);};
 
+        // test speed for optimization (debugging)
+        int averageSpeed = 0;
+        int counter = 1;
+
         // Game information
-        const int gameSpeed = 17; // How many miliseccond per refresh
+        const int gameSpeed = 25; // How many miliseccond per refresh
         const int width = 11;
         const int height = 22;
         const int mapSize = width*height;
         int option = 0;
-        int x,y,cord,speed,blockId,totalRotationStep;
+
+        int x,y,cord,blockId,totalRotationStep;
+        int defaultSpeed,speed,level,nextLevelHandler,movingCycle,sensitivity;
+        const int maxLevel = 13;
+
         unsigned int score = 0;
         int nextBlockId;
 
         // For optimization
         int collisionYCordinate = height; // Calculate shortest step before collision
 
-        // Get user input
+        // Get user input;
         unsigned int rotationStep; // số thực không âm (real number)
-        bool keyPressed1; // Left and right arrow (To prevent toggle and 2 keys press at the same time)
-        bool keyPressed2; // Q and E button (rotate left and right)
-        bool keyPressed3; // down and space button
+        int toggleTimer; // equal to sensitivity left and right button
+        bool keyPressed2 = false; // Q and E button (rotate left and right) (To prevent toggle and 2 keys press at the same time)
+        bool keyPressed3 = false; // down and space button
 
         // memory on heap
         int* map;
@@ -79,11 +88,10 @@ class GameTetris
 
         int block[4] = {}; // intialize array
 
-        // int pieceSlot[2] = {}; // for next piece
-
     public:
         GameTetris(){ // Constructor
-            speed = 5;
+            toggleTimer = 0;
+            movingCycle = 100/gameSpeed; // ~ 30 miliseccond; = 3 refresh time per 25 milisec game speed
             nextBlockId = rand()%7;
             // Dynamic array allocate on the heap
             map = new int[mapSize]();
@@ -147,6 +155,20 @@ string GameTetris::coloring(int blockIdIndex){
     return "";
 }
 
+void GameTetris::renewMap(){ // temporary
+    x = 3;
+    y = 0;
+    cord = index(x,y);
+    score = 0;
+    level = 1;
+    nextLevelHandler = 0;
+
+    for (int i = 0; i < mapSize; i++){
+        map[i] = -1;
+    }
+    intializer();
+}
+
 void GameTetris::calculateCollisionStep(){
     // check colision code 2 (For optimization: reduce time cycle (calculate step before colision))
     int minCollisionStep = height;
@@ -162,18 +184,19 @@ void GameTetris::calculateCollisionStep(){
     collisionYCordinate = y + minCollisionStep;
 }
 
-void GameTetris::renewMap(){ // temporary
-    x = 3;
-    y = 0;
-    cord = index(x,y);
-    score = 0;
-    for (int i = 0; i < mapSize; i++){
-        map[i] = -1;
-    }
-    intializer();
-}
-
 void GameTetris::intializer(){
+    if (score >= 100*nextLevelHandler && level < (maxLevel - 1)){
+        nextLevelHandler++;
+        level++;
+        defaultSpeed = maxLevel - level;
+        speed = defaultSpeed;
+
+        // Compare speed and moving cycles of each level4
+        int checkLevelSensitivity = level/((maxLevel) - movingCycle);// return 1 or 0; !checkcondition = -checkCondition+1
+        sensitivity = checkLevelSensitivity*defaultSpeed + (-checkLevelSensitivity+1)*movingCycle;
+    }
+
+
     blockId = nextBlockId;
     nextBlockId = rand()%7;
     rotationStep = 0;
@@ -195,13 +218,16 @@ void GameTetris::intializer(){
 
 void GameTetris::updateUiLayout(){
     cls();
+    //char *layout = "adasda";
+
     string layout = "";
     string space = string(width*2,' ');
     string nextPiecesField = "";
+    string statusField;
 
     int temp = 0;
     for (int i = 0; i < 4; i++){
-        nextPiecesField += space+WHITE" #  |";
+        nextPiecesField += space+" #  |";
         for (int j = 0;j < 4;j++){
             if (index(j,i) != blockData(temp,0,nextBlockId)){
                 nextPiecesField += WHITE" |";
@@ -210,20 +236,35 @@ void GameTetris::updateUiLayout(){
                 temp++;
             }
         }
-        nextPiecesField += WHITE"  #\n";
+        nextPiecesField += WHITE"\n";
     }
-        /*for (int j = 0; j < width; j++){
-            layout += " |";
-        }*/
-    layout = space+WHITE+" #     NEXT    #\n"+nextPiecesField+space+" # ----------- #";
-        cout << layout;
+    statusField = 
+        space+" #*******************\n"+
+        space+" #      STATUS\n"+
+        space+" # - Level: "+to_string(level)+"\n"+
+        space+" # - Score: "+to_string(score)+"\n"+
+        space+" # - Total Level: "+to_string(maxLevel - 1)+"\n"+
+        space+" #*******************\n"+
+        space+" #     DEBUG MENU\n"+
+        space+" # - Frame rate (ms): "+to_string(gameSpeed)+" ms\n"+
+        space+" # - Sensitivity: "+to_string(sensitivity)+"\n"+
+        space+" # - Default sensitivity: "+to_string(sensitivity)+"\n"+
+        space+" # - Avg.Speed: "+to_string(averageSpeed/counter)+" ms  \n";
+
+    layout = space+WHITE+" #*******************\n"+space+" #     NEXT\n"+nextPiecesField+space+" #             \n" + statusField;
+
+    averageSpeed = 0;
+    counter = 1;
+
+    printf("%s\n",layout.c_str());
 }
 
 void GameTetris::updateConsoleGraphics(){
     cls();
+
     string gameField = ""; // Optimizing display
     int coloringId; // Prevent repetitive coloring
-
+    
     for (int i = 0; i < mapSize; i++){
         renderingMap[i] = map[i];
     }
@@ -247,15 +288,14 @@ void GameTetris::updateConsoleGraphics(){
         }
         //Ui = Ui + to_string(renderingMap[k])+"|";
     }
-    cout << gameField << "Test: " << score << " " << endl;
+    printf("%s\n",gameField.c_str());
 }
 
 void GameTetris::controller(){
+
     // Move left and right
-    if ((GetAsyncKeyState(VK_LEFT) == GetAsyncKeyState(VK_RIGHT)) && keyPressed1){
-        keyPressed1 = false;
-    } else if ((GetAsyncKeyState(VK_LEFT) != GetAsyncKeyState(VK_RIGHT)) && !keyPressed1){
-        keyPressed1 = true;
+    if (GetAsyncKeyState(VK_LEFT) != GetAsyncKeyState(VK_RIGHT) && toggleTimer >= sensitivity){
+        toggleTimer = 0;
         if (GetAsyncKeyState(VK_LEFT) < 0){
             for (int i = 0; i < 4; i++){ // Collision detection (moving left)
                 int temp = index(x-1,y) + block[i];
@@ -270,7 +310,39 @@ void GameTetris::controller(){
             }
         }
         calculateCollisionStep();
+    } else if (toggleTimer < sensitivity){
+        toggleTimer++;
     }
+    /*
+
+    // shitty code down here
+    if (leftKeyPressed == rightKeyPressed){
+        toggleTimer = -(sensitivity*(1/testVariable));
+        if (GetAsyncKeyState(VK_LEFT) < 0){ leftKeyPressed = true;testVariable++;
+        } else if (GetAsyncKeyState(VK_RIGHT) < 0){ rightKeyPressed = true;testVariable++;} else {
+            testVariable=1;
+        }
+    } else if (leftKeyPressed != rightKeyPressed){
+        toggleTimer++;
+        if (toggleTimer == sensitivity){
+            if (leftKeyPressed){
+                for (int i = 0; i < 4; i++){ // Collision detection (moving left)
+                    int temp = index(x-1,y) + block[i];
+                    if (map[temp] != -1 || temp % width == 0){break;}
+                    if (i == 3){x--;};
+                }
+            } else if (rightKeyPressed){
+                for (int j = 0; j < 4; j++){ // Collision detection (moving right)
+                    int temp = index(x+1,y) + block[j];
+                    if (map[temp] != -1 || temp % width == 0){break;}
+                    if (j == 3){x++;}
+                }
+            }
+            leftKeyPressed = false;
+            rightKeyPressed = false;
+            calculateCollisionStep();
+        }
+    }*/
 
     // Rotate left and rotate right
     if ((GetAsyncKeyState(0x51) == GetAsyncKeyState(0x45)) && keyPressed2){
@@ -298,12 +370,13 @@ void GameTetris::controller(){
     }
 
     if ((GetAsyncKeyState(VK_DOWN) == GetAsyncKeyState(VK_SPACE)) && keyPressed3){
-        // speed = speed/4;
+        speed = defaultSpeed;
         keyPressed3 = false;
     } else if ((GetAsyncKeyState(VK_DOWN) != GetAsyncKeyState(VK_SPACE)) && !keyPressed3){
-        //speed = speed*4;
         keyPressed3 = true;
-        if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;}
+        if (GetAsyncKeyState(VK_DOWN) < 0){speed = 1;
+        } else if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;speed = 1;}
+        
     }
 }
 
@@ -358,7 +431,9 @@ void GameTetris::updateLogic(){
         updateConsoleGraphics();
 
         clock_t end = clock();
-        cout << end - start << + " " << endl;
+        averageSpeed += end - start;
+        counter++;
+        //cout << end - start << + " " << endl;
         if (end - start < gameSpeed){
             Sleep(gameSpeed - (end - start));
         }
@@ -403,8 +478,32 @@ int GameTetris::run(){
 
 
 int main() {
+    /*
+    #if defined(NOSYNC)
+        std::cout.sync_with_stdio(false);
+    #endif*/
+
+    
+    ios_base::sync_with_stdio(false);
     GameTetris box;
     box.run();
-    //system("pause");
+    /*
+    system("color 0F");
+    // compare speed
+    char *test = "Mamamia";
+    clock_t start = clock();
+
+    for (int i = 0; i < 1000; i++){
+        //write(1, test , strlen(test));
+        //cout << "Mamamia";
+        //write(2,test,strlen(test));
+    }
+    clock_t end = clock();
+    cout << end - start << + " " << endl;
+    */
+
+
+
+    system("pause");
     return 0;
 }
