@@ -26,7 +26,7 @@ class GameTetris
         int counter = 1;
 
         // Game information
-        const int gameSpeed = 25; // How many miliseccond per refresh
+        const double gameSpeed = 16.6; // How many miliseccond per refresh
         const int width = 11;
         const int height = 22;
         const int mapSize = width*height;
@@ -36,7 +36,7 @@ class GameTetris
 
         int x,y,cord,blockId,totalRotationStep;
         int defaultSpeed,speed,level,nextLevelHandler,movingCycle,sensitivity;
-        const int maxLevel = 13;
+        const int maxLevel = 16;
 
         unsigned int score = 0;
         int nextBlockId;
@@ -94,7 +94,7 @@ class GameTetris
     public:
         GameTetris(){ // Constructor
             toggleTimer = 0;
-            movingCycle = 100/gameSpeed; // ~ 30 miliseccond; = 3 refresh time per 25 milisec game speed
+            movingCycle = 117/gameSpeed; // ~ 30 miliseccond; = 3 refresh time per 25 milisec game speed
             nextBlockId = rand()%7 + 1;
             // Dynamic array allocate on the heap
             map = new int[mapSize]();
@@ -177,11 +177,11 @@ void GameTetris::intializer(){
     if (score >= 100*nextLevelHandler && level < (maxLevel - 1)){
         nextLevelHandler++;
         level++;
-        defaultSpeed = maxLevel - level;
+        defaultSpeed = 2*(maxLevel - level)+1;
         speed = defaultSpeed;
 
         // Compare speed and moving cycles of each level4
-        int checkLevelSensitivity = level/((maxLevel) - movingCycle);// return 1 or 0; !checkcondition = -checkCondition+1
+        int checkLevelSensitivity = 2*level/((2*maxLevel) - movingCycle);// return 1 or 0; !checkcondition = -checkCondition+1
         sensitivity = checkLevelSensitivity*defaultSpeed + (-checkLevelSensitivity+1)*movingCycle;
     }
 
@@ -222,7 +222,7 @@ void GameTetris::updateUiLayout(){
                 nextPiecesField += WHITE" |";
             } else {
                 nextPiecesField += color[nextBlockId];
-                nextPiecesField += "|O";
+                nextPiecesField += "O|";
                 temp++;
             }
         }
@@ -230,9 +230,10 @@ void GameTetris::updateUiLayout(){
     }
     statusField = 
         space+" #*******************\n"+
-        space+" #      STATUS\n"+
+        space+" #      IN-GAME STATUS\n"+
         space+" # - Level: "+to_string(level)+"\n"+
         space+" # - Score: "+to_string(score)+"\n"+
+        space+" # - Speed: "+to_string(defaultSpeed)+"\n"+
         space+" # - Total Level: "+to_string(maxLevel - 1)+"\n"+
         space+" # - Next piece ID: "+to_string(nextBlockId)+" \n"+
         space+" #*******************\n"+
