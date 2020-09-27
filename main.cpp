@@ -22,6 +22,7 @@ class GameTetris
 
         // test speed for optimization (debugging)
         int averageSpeed = 0;
+        int maxTime = 0;
         int counter = 1;
 
         // Game information
@@ -29,7 +30,9 @@ class GameTetris
         const int width = 11;
         const int height = 22;
         const int mapSize = width*height;
+        const int air = 0;
         int option = 0;
+        const char *color[8] ={GREY,CYAN,BLUE,WHITE,YELLOW,GREEN,MAGNETA,RED};
 
         int x,y,cord,blockId,totalRotationStep;
         int defaultSpeed,speed,level,nextLevelHandler,movingCycle,sensitivity;
@@ -92,14 +95,14 @@ class GameTetris
         GameTetris(){ // Constructor
             toggleTimer = 0;
             movingCycle = 100/gameSpeed; // ~ 30 miliseccond; = 3 refresh time per 25 milisec game speed
-            nextBlockId = rand()%7;
+            nextBlockId = rand()%7 + 1;
             // Dynamic array allocate on the heap
             map = new int[mapSize]();
             renderingMap = new int[mapSize]();
             renewMap();
         }
         int blockData(int col,int row,int id);
-        string coloring(int blockIdIndex);
+        // string coloring(int blockIdIndex);
         void calculateCollisionStep();
 
         void renewMap(); // temporary
@@ -130,29 +133,15 @@ void cls()
 int GameTetris::blockData(int col,int row,int id){
     int temp = col + row*4;
     switch (id) {
-        case 0: return iBlock[temp];
-        case 1: return jBlock[temp];
-        case 2: return lBlock[temp];
-        case 3: return oBlock[temp];
-        case 4: return sBlock[temp];
-        case 5: return tBlock[temp];
-        case 6: return zBlock[temp];
+        case 1: return iBlock[temp];
+        case 2: return jBlock[temp];
+        case 3: return lBlock[temp];
+        case 4: return oBlock[temp];
+        case 5: return sBlock[temp];
+        case 6: return tBlock[temp];
+        case 7: return zBlock[temp];
     }
     return 0;
-}
-
-string GameTetris::coloring(int blockIdIndex){
-    switch (blockIdIndex){
-        case(-1):return GREY;
-        case(0):return CYAN;
-        case(1):return BLUE;
-        case(2):return WHITE;
-        case(3):return YELLOW;
-        case(4):return GREEN;
-        case(5):return MAGNETA;
-        case(6):return RED;
-    }
-    return "";
 }
 
 void GameTetris::renewMap(){ // temporary
@@ -160,11 +149,11 @@ void GameTetris::renewMap(){ // temporary
     y = 0;
     cord = index(x,y);
     score = 0;
-    level = 1;
+    level = 0;
     nextLevelHandler = 0;
 
     for (int i = 0; i < mapSize; i++){
-        map[i] = -1;
+        map[i] = air;
     }
     intializer();
 }
@@ -176,7 +165,7 @@ void GameTetris::calculateCollisionStep(){
         int collisionStep = 0;
         int temp = index(x,y+1) + block[i];
         for (temp; temp < index(0,height); temp+= width){
-            if (map[temp] != -1){break;}
+            if (map[temp] != air){break;}
             collisionStep++;
         }
         if (collisionStep < minCollisionStep){minCollisionStep = collisionStep;}
@@ -198,16 +187,16 @@ void GameTetris::intializer(){
 
 
     blockId = nextBlockId;
-    nextBlockId = rand()%7;
+    nextBlockId = rand()%7 + 1;
     rotationStep = 0;
     switch (blockId) {
-        case 0: totalRotationStep = (sizeof(iBlock)/sizeof(iBlock[0]))/4;break;
-        case 1: totalRotationStep = (sizeof(jBlock)/sizeof(jBlock[0]))/4;break;
-        case 2: totalRotationStep = (sizeof(lBlock)/sizeof(lBlock[0]))/4;break;
-        case 3: totalRotationStep = (sizeof(oBlock)/sizeof(oBlock[0]))/4;break;
-        case 4: totalRotationStep = (sizeof(sBlock)/sizeof(sBlock[0]))/4;break;
-        case 5: totalRotationStep = (sizeof(tBlock)/sizeof(tBlock[0]))/4;break;
-        case 6: totalRotationStep = (sizeof(zBlock)/sizeof(zBlock[0]))/4;break;
+        case 1: totalRotationStep = (sizeof(iBlock)/sizeof(iBlock[0]))/4;break;
+        case 2: totalRotationStep = (sizeof(jBlock)/sizeof(jBlock[0]))/4;break;
+        case 3: totalRotationStep = (sizeof(lBlock)/sizeof(lBlock[0]))/4;break;
+        case 4: totalRotationStep = (sizeof(oBlock)/sizeof(oBlock[0]))/4;break;
+        case 5: totalRotationStep = (sizeof(sBlock)/sizeof(sBlock[0]))/4;break;
+        case 6: totalRotationStep = (sizeof(tBlock)/sizeof(tBlock[0]))/4;break;
+        case 7: totalRotationStep = (sizeof(zBlock)/sizeof(zBlock[0]))/4;break;
     }
     for (int i = 0;i < sizeof(block)/sizeof(block[0]);i++){
         block[i] = blockData(i,rotationStep%totalRotationStep,blockId);
@@ -232,7 +221,8 @@ void GameTetris::updateUiLayout(){
             if (index(j,i) != blockData(temp,0,nextBlockId)){
                 nextPiecesField += WHITE" |";
             } else {
-                nextPiecesField += coloring(nextBlockId)+"O|";
+                nextPiecesField += color[nextBlockId];
+                nextPiecesField += "|O";
                 temp++;
             }
         }
@@ -244,16 +234,19 @@ void GameTetris::updateUiLayout(){
         space+" # - Level: "+to_string(level)+"\n"+
         space+" # - Score: "+to_string(score)+"\n"+
         space+" # - Total Level: "+to_string(maxLevel - 1)+"\n"+
+        space+" # - Next piece ID: "+to_string(nextBlockId)+" \n"+
         space+" #*******************\n"+
         space+" #     DEBUG MENU\n"+
-        space+" # - Frame rate (ms): "+to_string(gameSpeed)+" ms\n"+
-        space+" # - Sensitivity: "+to_string(sensitivity)+"\n"+
-        space+" # - Default sensitivity: "+to_string(sensitivity)+"\n"+
-        space+" # - Avg.Speed: "+to_string(averageSpeed/counter)+" ms  \n";
+        space+" # - Frame rate (ms): "+to_string(gameSpeed)+" ms ("+to_string(1000/gameSpeed)+" fps)\n"+
+        space+" # - Current sensitivity: "+to_string(sensitivity)+"\n"+
+        space+" # - Default sensitivity: "+to_string(movingCycle)+"\n"+
+        space+" # - Avg.Time: "+to_string(averageSpeed/counter)+" ms  \n"+
+        space+" # - Max.Time: "+to_string(maxTime)+" ms  \n";
 
     layout = space+WHITE+" #*******************\n"+space+" #     NEXT\n"+nextPiecesField+space+" #             \n" + statusField;
 
     averageSpeed = 0;
+    maxTime = 0;
     counter = 1;
 
     printf("%s\n",layout.c_str());
@@ -277,14 +270,15 @@ void GameTetris::updateConsoleGraphics(){
     for (int k = width*2; k < mapSize; k++){
         if (k % width == 0){gameField = gameField + "\n";}
 
-        if (coloringId != renderingMap[k]){
-            gameField = gameField+coloring(renderingMap[k]);
-        }
+        
+        //if (coloringId != renderingMap[k]){
+        //    gameField = gameField+color[renderingMap[k]];
+        //}
 
-        if (renderingMap[k] != -1){
-            gameField = gameField + "O|";
+        if (renderingMap[k] != air){
+            gameField = gameField +color[renderingMap[k]]+ "O|";
         } else {
-            gameField = gameField + " |";
+            gameField = gameField +color[renderingMap[k]]+" |";
         }
         //Ui = Ui + to_string(renderingMap[k])+"|";
     }
@@ -299,13 +293,13 @@ void GameTetris::controller(){
         if (GetAsyncKeyState(VK_LEFT) < 0){
             for (int i = 0; i < 4; i++){ // Collision detection (moving left)
                 int temp = index(x-1,y) + block[i];
-                if (map[temp] != -1 || temp % width == 0){break;}
+                if (map[temp] != air || temp % width == 0){break;}
                 if (i == 3){x--;};
             }
         } else if (GetAsyncKeyState(VK_RIGHT) < 0){
             for (int j = 0; j < 4; j++){ // Collision detection (moving right)
                 int temp = index(x+1,y) + block[j];
-                if (map[temp] != -1 || temp % width == 0){break;}
+                if (map[temp] != air || temp % width == 0){break;}
                 if (j == 3){x++;}
             }
         }
@@ -352,13 +346,13 @@ void GameTetris::controller(){
         if (GetAsyncKeyState(0x51) < 0){ // Left Rotation
             for (int i = 0; i < 4; i++){ // Collision detection (rotate left)
                 int temp = index(x,y) + blockData(i,(rotationStep-1)%totalRotationStep,blockId);
-                if (map[temp] != -1 || temp % width == 0 || temp > index(0,height)){break;}
+                if (map[temp] != air || temp % width == 0 || temp > index(0,height)){break;}
                 if (i == 3){rotationStep--;};
             }
         } else if (GetAsyncKeyState(0x45) < 0){ // Right Rotation
             for (int j = 0; j < 4; j++){ // Collision detection (rotate right)
                 int temp = index(x,y) + blockData(j,(rotationStep+1)%totalRotationStep,blockId);
-                if (map[temp] != -1 || temp % width == 0 || temp > index(0,height)){break;}
+                if (map[temp] != air || temp % width == 0 || temp > index(0,height)){break;}
                 if (j == 3){rotationStep++;};
             }
         }
@@ -375,7 +369,7 @@ void GameTetris::controller(){
     } else if ((GetAsyncKeyState(VK_DOWN) != GetAsyncKeyState(VK_SPACE)) && !keyPressed3){
         keyPressed3 = true;
         if (GetAsyncKeyState(VK_DOWN) < 0){speed = 1;
-        } else if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;speed = 1;}
+        } else if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;}
         
     }
 }
@@ -390,13 +384,13 @@ void GameTetris::movingDown(){
         for (int row = height - 1; row >= 0; row--){
             int totalBlockPerRow = 0;
             for (int col = 0; col < width; col++){
-                if (map[index(col,row)] != -1){
+                if (map[index(col,row)] != air){
                     totalBlockPerRow++;
                 }
             }
             if (totalBlockPerRow != 10){
                 for (int k = 0; k < width; k++){
-                    renderingMap[index(k,setToMapRow)] = map[index(k,row)];
+                    map[index(k,setToMapRow)] = map[index(k,row)];
                 }
                 setToMapRow--;
                 continue;
@@ -404,9 +398,6 @@ void GameTetris::movingDown(){
             score += 10;
         }
 
-        for (int i = 0; i < mapSize; i++){
-            map[i] = renderingMap[i];
-        }
         x = 3;
         y = 0;
         cord = index(x,y);
@@ -433,6 +424,8 @@ void GameTetris::updateLogic(){
         clock_t end = clock();
         averageSpeed += end - start;
         counter++;
+        
+        if (averageSpeed/counter > maxTime){ maxTime = averageSpeed/counter;};
         //cout << end - start << + " " << endl;
         if (end - start < gameSpeed){
             Sleep(gameSpeed - (end - start));
