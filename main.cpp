@@ -94,8 +94,7 @@ class GameTetris
     public:
         GameTetris(){ // Constructor
             toggleTimer = 0;
-            movingCycle = 117/gameSpeed; // ~ 30 miliseccond; = 3 refresh time per 25 milisec game speed
-            nextBlockId = rand()%7 + 1;
+            movingCycle = 50/gameSpeed; // ~ 30 miliseccond; = 3 refresh time per 25 milisec game speed
             // Dynamic array allocate on the heap
             map = new int[mapSize]();
             renderingMap = new int[mapSize]();
@@ -149,8 +148,12 @@ void GameTetris::renewMap(){ // temporary
     y = 0;
     cord = index(x,y);
     score = 0;
-    level = 0;
+    level = 1;
+    level--;
     nextLevelHandler = 0;
+
+    srand(time(NULL));
+    nextBlockId = rand()%7 + 1;
 
     for (int i = 0; i < mapSize; i++){
         map[i] = air;
@@ -177,7 +180,7 @@ void GameTetris::intializer(){
     if (score >= 100*nextLevelHandler && level < (maxLevel - 1)){
         nextLevelHandler++;
         level++;
-        defaultSpeed = 2*(maxLevel - level)+1;
+        defaultSpeed = 2*(maxLevel - level)-1;
         speed = defaultSpeed;
 
         // Compare speed and moving cycles of each level4
@@ -187,6 +190,7 @@ void GameTetris::intializer(){
 
 
     blockId = nextBlockId;
+    //srand(time(NULL)); // time as random seed 
     nextBlockId = rand()%7 + 1;
     rotationStep = 0;
     switch (blockId) {
@@ -370,7 +374,7 @@ void GameTetris::controller(){
     } else if ((GetAsyncKeyState(VK_DOWN) != GetAsyncKeyState(VK_SPACE)) && !keyPressed3){
         keyPressed3 = true;
         if (GetAsyncKeyState(VK_DOWN) < 0){speed = 1;
-        } else if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;}
+        } else if (GetAsyncKeyState(VK_SPACE) < 0){y = collisionYCordinate;speed = 1;}
         
     }
 }
@@ -414,7 +418,7 @@ void GameTetris::movingDown(){
 void GameTetris::updateLogic(){
     for (int i = 0; i <= speed; i ++){
         clock_t start = clock();
-        if (i == speed){
+        if (i >= speed){
             movingDown();
         } else {
             controller();
